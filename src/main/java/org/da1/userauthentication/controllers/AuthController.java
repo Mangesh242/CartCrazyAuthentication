@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/auth/v1")
+@RequestMapping("/api/v1")
 public class AuthController {
 
     @Autowired
@@ -55,10 +55,10 @@ public class AuthController {
         }
     }
 
-    public UserDTO from(User user){
+    private UserDTO from(User user){
         UserDTO userDTO = new UserDTO();
         userDTO.setId(user.getId());
-        userDTO.setId(user.getId());
+        userDTO.setEmail(user.getEmail());
         userDTO.setRoles(user.getRoles());
         return userDTO;
     }
