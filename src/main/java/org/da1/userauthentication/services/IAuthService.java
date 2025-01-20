@@ -12,4 +12,6 @@ public interface IAuthService {
     User signUp(String email,String password) throws UserAlreadyExistExceptions;
 
     Pair<User,String> login(String email, String password) throws UserAlreadyExistExceptions, UserNotRegisterred, PassWordMismatchException;
+
+    public Boolean validateToken(String token,Long userId);
 }

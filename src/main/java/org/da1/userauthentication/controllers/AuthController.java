@@ -5,7 +5,9 @@ import org.da1.userauthentication.dtos.LoginRequest;
 import org.da1.userauthentication.dtos.SignUpRequest;
 
 import org.da1.userauthentication.dtos.UserDTO;
+import org.da1.userauthentication.dtos.ValidateTokenDTO;
 import org.da1.userauthentication.exceptions.PassWordMismatchException;
+import org.da1.userauthentication.exceptions.UnAuthorizedException;
 import org.da1.userauthentication.exceptions.UserAlreadyExistExceptions;
 import org.da1.userauthentication.exceptions.UserNotRegisterred;
 import org.da1.userauthentication.models.User;
@@ -60,6 +62,20 @@ public class AuthController {
             return new ResponseEntity<>(null,HttpStatus.BAD_REQUEST);
         } catch (UserAlreadyExistExceptions e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @PostMapping("/validateToken")
+    public Boolean validateToken(@RequestBody ValidateTokenDTO validateTokenDTO)  {
+        try {
+            Boolean result = authService.validateToken(validateTokenDTO.getToken(), validateTokenDTO.getUserId());
+            if (!result) {
+                throw new UnAuthorizedException("Please login again");
+            }
+            return result;
+        }
+        catch (UnAuthorizedException exp){
+            return Boolean.FALSE;
         }
     }
 

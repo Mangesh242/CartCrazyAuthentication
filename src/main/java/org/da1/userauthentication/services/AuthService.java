@@ -1,6 +1,8 @@
 package org.da1.userauthentication.services;
 
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.MacAlgorithm;
@@ -9,7 +11,10 @@ import org.da1.userauthentication.exceptions.PassWordMismatchException;
 import org.da1.userauthentication.exceptions.UserAlreadyExistExceptions;
 import org.da1.userauthentication.exceptions.UserNotRegisterred;
 import org.da1.userauthentication.models.Role;
+import org.da1.userauthentication.models.Session;
+import org.da1.userauthentication.models.Status;
 import org.da1.userauthentication.models.User;
+import org.da1.userauthentication.repos.SessionRepo;
 import org.da1.userauthentication.repos.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,6 +31,12 @@ public class AuthService implements IAuthService {
 
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    @Autowired
+    private SessionRepo sessionRepo;
+
+    @Autowired
+    private SecretKey secretKey;
 
     @Override
     public User signUp(String email, String password) throws UserAlreadyExistExceptions {
@@ -70,16 +81,50 @@ public class AuthService implements IAuthService {
         payLoad.put("iss","crazycart");
         payLoad.put("scope",userOptional.get().getRoles());
 
-
 //        String message="{ \"email\": \""+email+"\", \"password\": \""+storePassword+"\" }";
 //        byte[] content=message.getBytes(StandardCharsets.UTF_8);
-
-
 //        String token= Jwts.builder().content(content).compact();
+
         MacAlgorithm algorithm=Jwts.SIG.HS256;
         SecretKey secretKey= algorithm.key().build();
         String token=Jwts.builder().claims(payLoad).signWith(secretKey).compact();
 
+        Session session=new Session();
+        session.setToken(token);
+        session.setUser(userOptional.get());
+        session.setStatus(Status.ACTIVE);
+        sessionRepo.save(session);
+
         return new Pair<>(userOptional.get(),token);
+    }
+
+    public Boolean validateToken(String token,Long userId){
+        //Token expired or not
+        //We
+
+        //header, payload and secret
+        Optional<Session> optionalSession=sessionRepo.findByTokenAndUserId(token,userId);
+
+        if(optionalSession.isEmpty()){
+            return false;
+        }
+        String persistedToken=optionalSession.get().getToken();
+
+        JwtParser jwtParser=Jwts.parser().verifyWith(secretKey).build();
+        Claims claims = jwtParser.parseSignedClaims(token).getPayload();
+        Long tokenExpiry=(Long) claims.get("exp");
+        Long currentTimeInMillis=System.currentTimeMillis();
+
+        System.out.println(tokenExpiry);
+        System.out.println(currentTimeInMillis);
+
+        if(currentTimeInMillis> tokenExpiry){
+            Session session=optionalSession.get();
+            session.setStatus(Status.INACTIVE);
+            sessionRepo.save(session);
+            return false;
+        }
+
+        return true;
     }
 }
